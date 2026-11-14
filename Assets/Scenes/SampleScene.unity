@@ -440,8 +440,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: PurrNet.Runtime::PurrNet.NetworkManager
   _stopPlayingOnDisconnect: 0
   _startServerFlags: 9
-  _startClientFlags: -1
-  _cookieScope: 0
+  _startClientFlags: 7
+  _cookieScope: 1
   _dontDestroyOnLoad: 0
   _transport: {fileID: 1717567032}
   _networkPrefabs: {fileID: 11400000, guid: b2104f324b93624488717e7f9901d86b, type: 2}
@@ -479,7 +479,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ced7bf28cdbee104e8cdc34ab761b039, type: 3}
   m_Name: 
   m_EditorClassIdentifier: PurrNet.Runtime::PurrNet.PlayerSpawner
-  _playerPrefab: {fileID: 4376773289287050323, guid: 3832f4668206fa74084930cb136848a3, type: 3}
+  _playerPrefab:
+  - {fileID: 4965577292551059027, guid: 9b87d0b33d3601241a0b3311c91e311c, type: 3}
+  - {fileID: 4376773289287050323, guid: 3832f4668206fa74084930cb136848a3, type: 3}
   _ignoreNetworkRules: 0
   spawnPoints:
   - {fileID: 475732665}

@@ -25,7 +25,7 @@ namespace PurrNet
     [AddComponentMenu("PurrNet/Player Spawner")]
     public class PlayerSpawner : PurrMonoBehaviour
     {
-        [SerializeField] private GameObject _playerPrefab;
+        [SerializeField] private List<GameObject> _playerPrefab;
         [Tooltip("Even if rules are to not despawn on disconnect, this will ignore that and always spawn a player.")]
         [SerializeField] private bool _ignoreNetworkRules;
 
@@ -155,18 +155,18 @@ namespace PurrNet
             if (_spawnPointProvider != null)
             {
                 var point = _spawnPointProvider.NextSpawnPoint(player, scene);
-                newPlayer = SpawnPlayer(point.position, point.rotation, unityScene, out identity);
+                newPlayer = SpawnPlayer(player, point.position, point.rotation, unityScene, out identity);
             }
             else if (spawnPoints.Count > 0)
             {
                 var spawnPoint = spawnPoints[_currentSpawnPoint];
                 _currentSpawnPoint = (_currentSpawnPoint + 1) % spawnPoints.Count;
-                newPlayer = SpawnPlayer(spawnPoint.position, spawnPoint.rotation, unityScene, out identity);
+                newPlayer = SpawnPlayer(player, spawnPoint.position, spawnPoint.rotation, unityScene, out identity);
             }
             else
             {
-                _playerPrefab.transform.GetPositionAndRotation(out var position, out var rotation);
-                newPlayer = SpawnPlayer(position, rotation, unityScene, out identity);
+                _playerPrefab[((int)player.id.value) % 2].transform.GetPositionAndRotation(out var position, out var rotation);
+                newPlayer = SpawnPlayer(player, position, rotation, unityScene, out identity);
             }
 
             if (!newPlayer)
@@ -183,7 +183,7 @@ namespace PurrNet
             if (!main.TryGetModule(out GlobalOwnershipModule ownership, true))
                 return false;
 
-            if (main.prefabProvider == null || !main.prefabProvider.TryGetPrefabData(_playerPrefab, out var prefabData))
+            if (main.prefabProvider == null || !main.prefabProvider.TryGetPrefabData(_playerPrefab[((int)player.id.value) % 2], out var prefabData))
                 return false;
 
             foreach (var owned in ownership.EnumerateAllPlayerOwnedIds(player))
@@ -195,12 +195,12 @@ namespace PurrNet
             return false;
         }
 
-        private GameObject SpawnPlayer(Vector3 position, Quaternion rotation, Scene unityScene,
+        private GameObject SpawnPlayer(PlayerID player, Vector3 position, Quaternion rotation, Scene unityScene,
             out NetworkIdentity identity)
         {
             identity = null;
 
-            var newPlayer = UnityProxy.Instantiate(_playerPrefab, position, rotation, unityScene);
+            var newPlayer = UnityProxy.Instantiate(_playerPrefab[((int)player.id.value) % 2], position, rotation, unityScene);
 
             if (!newPlayer)
                 return null;
