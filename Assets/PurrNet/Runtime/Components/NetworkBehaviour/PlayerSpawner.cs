@@ -154,18 +154,26 @@ namespace PurrNet
 
             if (_spawnPointProvider != null)
             {
+                Debug.Log($"Using spawn point provider to spawn player {player} in scene {scene}.", this);
                 var point = _spawnPointProvider.NextSpawnPoint(player, scene);
                 newPlayer = SpawnPlayer(player, point.position, point.rotation, unityScene, out identity);
             }
             else if (spawnPoints.Count > 0)
             {
+                Debug.Log($"Using spawn points list to spawn player {player} in scene {scene}.", this);
                 var spawnPoint = spawnPoints[_currentSpawnPoint];
                 _currentSpawnPoint = (_currentSpawnPoint + 1) % spawnPoints.Count;
                 newPlayer = SpawnPlayer(player, spawnPoint.position, spawnPoint.rotation, unityScene, out identity);
             }
             else
             {
-                _playerPrefab[((int)player.id.value) % 2].transform.GetPositionAndRotation(out var position, out var rotation);
+                Debug.Log($"No spawn points available, spawning player {player} in scene {scene} at prefab's default position and rotation.", this);
+
+                int PlayerPrefabCount = _playerPrefab.Count;
+
+                int SpawnedPrefabIndex = ((int)player.id.value) % PlayerPrefabCount;
+
+                _playerPrefab[SpawnedPrefabIndex].transform.GetPositionAndRotation(out var position, out var rotation);
                 newPlayer = SpawnPlayer(player, position, rotation, unityScene, out identity);
             }
 
@@ -183,8 +191,15 @@ namespace PurrNet
             if (!main.TryGetModule(out GlobalOwnershipModule ownership, true))
                 return false;
 
-            if (main.prefabProvider == null || !main.prefabProvider.TryGetPrefabData(_playerPrefab[((int)player.id.value) % 2], out var prefabData))
+            int PlayerPrefabCount = _playerPrefab.Count;
+
+            int SpawnedPrefabIndex = ((int)player.id.value) % PlayerPrefabCount;
+
+            if (main.prefabProvider == null || !main.prefabProvider.TryGetPrefabData(_playerPrefab[SpawnedPrefabIndex], out var prefabData))
+            {
+                Debug.LogWarning($"Failed to get prefab data for player prefab for player {player}.", this);
                 return false;
+            }
 
             foreach (var owned in ownership.EnumerateAllPlayerOwnedIds(player))
             {
@@ -200,13 +215,25 @@ namespace PurrNet
         {
             identity = null;
 
-            var newPlayer = UnityProxy.Instantiate(_playerPrefab[((int)player.id.value) % 2], position, rotation, unityScene);
+            int PlayerPrefabCount = _playerPrefab.Count;
+
+            int SpawnedPrefabIndex = ((int)player.id.value) % PlayerPrefabCount;
+
+            Debug.Log($"Spawning player {player} with prefab index {SpawnedPrefabIndex} at position {position} and rotation {rotation}.", this);
+
+            var newPlayer = UnityProxy.Instantiate(_playerPrefab[SpawnedPrefabIndex], position, rotation, unityScene);
 
             if (!newPlayer)
+            {
+                Debug.LogError($"Failed to instantiate player prefab for player {player}.", this);
                 return null;
+            }
 
             if (!newPlayer.TryGetComponent(out identity))
+            {
+                Debug.LogError($"Player prefab for player {player} does not have a NetworkIdentity component.", this);
                 return newPlayer;
+            }
 
             var nm = manager ? manager : NetworkManager.main;
 

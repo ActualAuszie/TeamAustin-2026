@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class BallPlayer : NetworkPlayer
 {
-    public float BounceStrength = 20.0f;
+    public float BounceStrength = 100.0f;
     public float GroundBounceDist = 0.5f;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
@@ -25,7 +25,7 @@ public class BallPlayer : NetworkPlayer
         Vector3 rayStart = transform.position;
         rayStart.y += GroundCheckStartOffsetY;
 
-        Debug.Log(rayStart);
+        //Debug.Log(rayStart);
 
         Vector3 rayDir = Vector3.down;
 

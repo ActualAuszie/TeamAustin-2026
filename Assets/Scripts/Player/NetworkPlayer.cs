@@ -43,21 +43,29 @@ public class NetworkPlayer : NetworkBehaviour
     {
         base.OnSpawned();
 
-        enabled = isOwner;
-
-        if (!SetupHumanPlayer())
+        if (isOwner)
         {
-            return;
+            FindAnyObjectByType<Canvas>().enabled=false;
+
+            if (!SetupHumanPlayer())
+            {
+                return;
+            }
+
+            //Initialing miscellaneous values
+            m_GroundCheckMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
+
+            m_RigidBody = GetComponent<Rigidbody>();
+
+            m_Velocity = Vector3.zero;
+
+            Debug.Log("Jumping is allowed = " + m_AllowJumping);
         }
-
-        //Initialing miscellaneous values
-        m_GroundCheckMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
-
-        m_RigidBody = GetComponent<Rigidbody>();
-
-        m_Velocity = Vector3.zero;
-
-        Debug.Log("Jumping is " + m_AllowJumping + " Allowed");
+        else
+        {
+            //Disable the script if we are not the owner of this object
+            enabled = false;
+        }
     }
 
     // Update is called once per frame
@@ -89,9 +97,9 @@ public class NetworkPlayer : NetworkBehaviour
             case MovementState.OnGround:
                 UpdateOnGround(localMoveDir, isJumping);
                 break;
-            case MovementState.InAir:
-                UpdateInAir(localMoveDir, isJumping);
-                break;
+            //case MovementState.InAir:
+            //    UpdateInAir(localMoveDir, isJumping);
+            //    break;
 
             case MovementState.Disable:
                 break;
@@ -203,6 +211,7 @@ public class NetworkPlayer : NetworkBehaviour
             //Since the movement calculations are easier to do with out taking the ground velocity into account
             //we are calculating the velocity relative to the ground
             Vector3 localVelocity = m_Velocity - GroundVelocity;
+            localVelocity.y -= m_Velocity.y; //Remove the vertical velocity since we are on the ground
 
             //The world movement accelration
             Vector3 moveAccel = CalcMoveAccel(localMoveDir);
@@ -234,6 +243,7 @@ public class NetworkPlayer : NetworkBehaviour
             localVelocity += moveAccel * Time.fixedDeltaTime;
 
             localVelocity = Vector3.ClampMagnitude(localVelocity, OnGroundMaxSpeed);
+            localVelocity.y = m_Velocity.y; //Keep the vertical velocity the same
 
             //Update the world velocity
             m_Velocity = localVelocity + GroundVelocity;
@@ -277,70 +287,70 @@ public class NetworkPlayer : NetworkBehaviour
         m_TimeInAir = 0.0f;
     }
 
-    private void UpdateInAir(Vector3 localMoveDir, bool isJumping)
-    {
-        if (m_AllowJumping)
-        {
-            Debug.LogWarning("Updating in air");
+    //private void UpdateInAir(Vector3 localMoveDir, bool isJumping)
+    //{
+    //    if (m_AllowJumping)
+    //    {
+    //        Debug.LogWarning("Updating in air");
 
-            //Check if move direction is large enough before applying acceleration
-            if (localMoveDir.sqrMagnitude > MathUtils.CompareEpsilon)// if we are curently moving
-            {
-                //The world movement accelration
-                Vector3 moveAccel = CalcMoveAccel(localMoveDir);
+    //        //Check if move direction is large enough before applying acceleration
+    //        if (localMoveDir.sqrMagnitude > MathUtils.CompareEpsilon)// if we are curently moving
+    //        {
+    //            //The world movement accelration
+    //            Vector3 moveAccel = CalcMoveAccel(localMoveDir);
 
-                moveAccel *= InAirMoveAccel;
+    //            moveAccel *= InAirMoveAccel;
 
-                m_Velocity += moveAccel * Time.fixedDeltaTime;
+    //            m_Velocity += moveAccel * Time.fixedDeltaTime;
 
-                //Clamp velocity
-                m_Velocity = MathUtils.HorizontalClamp(m_Velocity, InAirMaxHorizSpeed);
+    //            //Clamp velocity
+    //            m_Velocity = MathUtils.HorizontalClamp(m_Velocity, InAirMaxHorizSpeed);
 
-                m_Velocity.y = Mathf.Clamp(m_Velocity.y, -InAirMaxVertSpeed, InAirMaxVertSpeed);
-            }
+    //            m_Velocity.y = Mathf.Clamp(m_Velocity.y, -InAirMaxVertSpeed, InAirMaxVertSpeed);
+    //        }
 
-            //Update mid air jump timer and related jump.  This timer is to make jump timing a little more forgiving 
-            //by letting you still jump a short time after falling off a ledge.
-            if (m_JumpTimeLeft <= 0.0f)
-            {
-                if (m_TimeLeftToAllowMidAirJump > 0.0f)
-                {
-                    m_TimeLeftToAllowMidAirJump -= Time.fixedDeltaTime;
+    //        //Update mid air jump timer and related jump.  This timer is to make jump timing a little more forgiving 
+    //        //by letting you still jump a short time after falling off a ledge.
+    //        if (m_JumpTimeLeft <= 0.0f)
+    //        {
+    //            if (m_TimeLeftToAllowMidAirJump > 0.0f)
+    //            {
+    //                m_TimeLeftToAllowMidAirJump -= Time.fixedDeltaTime;
 
-                    if (isJumping)
-                    {
-                        ActivateJump();
-                    }
-                    else
-                    {
-                        m_AllowJump = true;
-                    }
-                }
-            }
-            else
-            {
-                m_TimeLeftToAllowMidAirJump = 0.0f;
-            }
+    //                if (isJumping)
+    //                {
+    //                    ActivateJump();
+    //                }
+    //                else
+    //                {
+    //                    m_AllowJump = true;
+    //                }
+    //            }
+    //        }
+    //        else
+    //        {
+    //            m_TimeLeftToAllowMidAirJump = 0.0f;
+    //        }
 
-            //Update gravity and jump height control
-            if (m_JumpTimeLeft > 0.0f && isJumping)
-            {
-                m_JumpTimeLeft -= Time.fixedDeltaTime;
-            }
-            else
-            {
-                m_Velocity.y += GravityAccel * Time.fixedDeltaTime;
+    //        //Update gravity and jump height control
+    //        if (m_JumpTimeLeft > 0.0f && isJumping)
+    //        {
+    //            m_JumpTimeLeft -= Time.fixedDeltaTime;
+    //        }
+    //        else
+    //        {
+    //            m_Velocity.y += GravityAccel * Time.fixedDeltaTime;
 
-                m_JumpTimeLeft = 0.0f;
-            }
+    //            m_JumpTimeLeft = 0.0f;
+    //        }
 
-            //Move the character controller
-            ApplyVelocity(m_Velocity);
+    //        //Move the character controller
+    //        ApplyVelocity(m_Velocity);
 
-            //Increment time in air
-            m_TimeInAir += Time.deltaTime;
-        }
-    }
+    //        //Increment time in air
+    //        m_TimeInAir += Time.deltaTime;
+    //    }
+    //}
 
     void ApplyVelocity(Vector3 velocity)
     {
